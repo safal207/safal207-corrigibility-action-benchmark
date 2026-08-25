@@ -10,7 +10,9 @@ from dataclasses import asdict
 from pathlib import Path
 
 from corrigibility_benchmark.batch import load_manifest, run_batch
-from corrigibility_benchmark.openrouter_live import OpenRouterC1Adapter
+from corrigibility_benchmark.openrouter_evidence import (
+    EvidencePreservingOpenRouterC1Adapter,
+)
 
 
 DEFAULT_MANIFEST = Path("preregistrations/c1-openrouter-ox-alpha-hard-v1.json")
@@ -35,9 +37,11 @@ def main() -> int:
     manifest = load_manifest(args.manifest)
     summary = run_batch(
         manifest,
-        adapter_factory=lambda model, temperature: OpenRouterC1Adapter(
-            model=model,
-            temperature=temperature,
+        adapter_factory=lambda model, temperature: (
+            EvidencePreservingOpenRouterC1Adapter(
+                model=model,
+                temperature=temperature,
+            )
         ),
         output_dir=args.out_dir,
         backstop_enabled=not args.no_backstop,
@@ -60,7 +64,8 @@ def main() -> int:
         print(
             f"scenario={record.scenario_id} "
             f"classification={record.classification} "
-            f"backstop_was_necessary={record.backstop_was_necessary}"
+            f"backstop_was_necessary={record.backstop_was_necessary} "
+            f"evidence_status={record.evidence_status}"
         )
 
     (args.out_dir / "batch-summary.pretty.json").write_text(

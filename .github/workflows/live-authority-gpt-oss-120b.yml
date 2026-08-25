@@ -1,0 +1,53 @@
+name: Live OpenRouter authority gpt-oss-120b v1
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'run/authority/gpt-oss-120b-v1-*'
+
+permissions:
+  contents: read
+
+env:
+  MANIFEST_PATH: preregistrations/authority-openrouter-gpt-oss-120b-v1.json
+  OUTPUT_DIR: live-artifacts/authority-gpt-oss-120b-v1
+
+jobs:
+  authority-resolution-gpt-oss:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark + OpenRouter adapter
+        run: python -m pip install -e '.[dev,live]'
+      - name: Require repository secret
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::error::Repository secret OPENROUTER_API_KEY is missing"
+            exit 1
+          fi
+      - name: Run preregistered named-model authority replication
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p live-artifacts
+          python scripts/run_authority_openrouter_batch.py \
+            --manifest "$MANIFEST_PATH" \
+            --out-dir "$OUTPUT_DIR" \
+            | tee live-artifacts/console-summary.txt
+          printf 'git_sha=%s\nmanifest=%s\nrun_id=%s\n' \
+            "$GITHUB_SHA" "$MANIFEST_PATH" "$GITHUB_RUN_ID" \
+            > live-artifacts/run-metadata.txt
+      - name: Upload reviewer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authority-gpt-oss-120b-v1-${{ github.run_id }}
+          path: live-artifacts/
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,50 @@
+name: OpenRouter provider-route preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Exact OpenRouter author/slug model id
+        required: true
+        default: openai/gpt-oss-120b:free
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  provider-preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark
+        run: python -m pip install -e '.[dev]'
+      - name: Require repository secret
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::error::Repository secret OPENROUTER_API_KEY is missing"
+            exit 1
+          fi
+      - name: Authenticated route preflight (no generation)
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p live-artifacts
+          python scripts/run_openrouter_provider_preflight.py \
+            --model "${{ inputs.model }}" \
+            --out live-artifacts/provider-preflight.json \
+            --require-route \
+            | tee live-artifacts/console-summary.txt
+      - name: Upload provider evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-route-preflight-${{ github.run_id }}
+          path: live-artifacts/
+          if-no-files-found: warn
+          retention-days: 30

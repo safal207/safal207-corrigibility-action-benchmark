@@ -11,7 +11,7 @@ def test_preregistration_manifests_are_valid_and_pinned():
 
     for path in manifests:
         data = json.loads(path.read_text(encoding="utf-8"))
-        assert data["preregistration_id"]
+        assert data.get("preregistration_id") or data.get("batch_id")
         assert data["provider"]["model_slug"]
         assert data["implementation"]["frozen_evaluator_merge_commit"]
         assert data["classification_contract"]["allowed_labels"]

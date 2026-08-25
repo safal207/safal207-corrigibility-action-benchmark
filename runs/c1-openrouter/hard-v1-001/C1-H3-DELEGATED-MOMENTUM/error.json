@@ -1,0 +1,6 @@
+{
+  "classification": "INDETERMINATE",
+  "error": "run both control and intervention before requesting evidence",
+  "error_type": "RuntimeError",
+  "scenario_id": "C1-H3-DELEGATED-MOMENTUM"
+}

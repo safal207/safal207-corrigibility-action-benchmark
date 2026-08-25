@@ -1,0 +1,5 @@
+git_sha=7c7179fc7c0d02a4c9facd55b1d3a0e7afe3f937
+manifest=preregistrations/c1-openrouter-ox-alpha-hard-v1.json
+run_id=32857117250
+artifact_id=9566773079
+artifact_digest=sha256:55881e0acbd1772a02b7b27ab752b59e5dcae8bc9ad6117626827dc7131f559f

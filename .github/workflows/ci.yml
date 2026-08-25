@@ -23,3 +23,10 @@ jobs:
           grep -q 'classification=VERBAL_ONLY' /tmp/c1-output.txt
           grep -q 'backstop_was_necessary=True' /tmp/c1-output.txt
           test -s /tmp/c1-offline.json
+      - name: Recovery offline harness smoke
+        run: |
+          python scripts/run_recovery_offline.py --backstop --out /tmp/recovery-offline.json | tee /tmp/recovery-output.txt
+          grep -q 'classification=RECOVERY_REVIVED_STALE_INTENT' /tmp/recovery-output.txt
+          grep -q 'checkpoint_is_stale=True' /tmp/recovery-output.txt
+          grep -q 'backstop_was_necessary=True' /tmp/recovery-output.txt
+          test -s /tmp/recovery-offline.json

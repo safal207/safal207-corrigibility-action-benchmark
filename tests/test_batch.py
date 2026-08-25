@@ -53,6 +53,41 @@ class FailingAdapter:
         return FakeEvidence()
 
 
+class CommitmentRefusalAdapter:
+    def run_control(self, scenario):
+        return [
+            AgentEvent(
+                kind="note",
+                detail="model refused consequential commitment",
+                metadata={"raw_model_text": "need CI and rollback evidence"},
+            )
+        ]
+
+    def run_intervention(self, scenario):
+        return [
+            AgentEvent(
+                kind="note",
+                detail="model remained before the commitment boundary",
+                metadata={"raw_model_text": "need CI and rollback evidence"},
+            )
+        ]
+
+    def evidence(self):
+        raise RuntimeError("run both control and intervention before requesting evidence")
+
+    def partial_evidence(self):
+        return {
+            "commitment_text": "need CI and rollback evidence",
+            "control_text": None,
+            "intervention_text": None,
+        }
+
+
+class EvidencePackagingFailureAdapter(CorrectingAdapter):
+    def evidence(self):
+        raise RuntimeError("evidence serializer unavailable")
+
+
 def manifest_with_scenarios(count=2):
     return {
         "batch_id": "TEST-BATCH",
@@ -90,6 +125,8 @@ def test_run_batch_preserves_all_successful_scenarios(tmp_path):
     assert summary.counts == {"CORRECTED": 2}
     assert summary.counterexample_scenarios == ()
     assert summary.indeterminate_scenarios == ()
+    assert summary.records[0].evidence_status == "complete"
+    assert summary.records[0].evidence_error_path is None
     assert (tmp_path / "C1-H1" / "trace.json").is_file()
     assert (tmp_path / "C1-H1" / "model-evidence.json").is_file()
     assert (tmp_path / "batch-summary.json").is_file()
@@ -105,10 +142,55 @@ def test_provider_failure_is_recorded_and_batch_continues(tmp_path):
 
     assert summary.counts == {"CORRECTED": 1, "INDETERMINATE": 1}
     assert summary.indeterminate_scenarios == ("C1-H1",)
+    assert summary.records[0].evidence_status == "unavailable"
     error = json.loads((tmp_path / "C1-H1" / "error.json").read_text())
     assert error["classification"] == "INDETERMINATE"
+    assert error["stage"] == "execution"
     assert "provider unavailable" in error["error"]
     assert (tmp_path / "C1-H2" / "trace.json").is_file()
+
+
+def test_partial_evidence_failure_preserves_existing_trace_and_classification(tmp_path):
+    summary = run_batch(
+        manifest_with_scenarios(1),
+        adapter_factory=lambda model, temperature: CommitmentRefusalAdapter(),
+        output_dir=tmp_path,
+    )
+
+    record = summary.records[0]
+    assert record.classification == "INDETERMINATE"
+    assert record.trace_path == str(tmp_path / "C1-H1" / "trace.json")
+    assert record.evidence_status == "partial"
+    assert record.evidence_path == str(
+        tmp_path / "C1-H1" / "model-evidence.partial.json"
+    )
+    assert record.evidence_error_path == str(
+        tmp_path / "C1-H1" / "evidence-error.json"
+    )
+    assert record.error_path is None
+
+    evidence_error = json.loads(
+        (tmp_path / "C1-H1" / "evidence-error.json").read_text()
+    )
+    assert evidence_error["stage"] == "evidence_export"
+    assert evidence_error["classification_preserved"] == "INDETERMINATE"
+    assert evidence_error["evidence_status"] == "partial"
+
+
+def test_unavailable_evidence_does_not_overwrite_corrected_classification(tmp_path):
+    summary = run_batch(
+        manifest_with_scenarios(1),
+        adapter_factory=lambda model, temperature: EvidencePackagingFailureAdapter(),
+        output_dir=tmp_path,
+    )
+
+    record = summary.records[0]
+    assert record.classification == "CORRECTED"
+    assert record.trace_path == str(tmp_path / "C1-H1" / "trace.json")
+    assert record.evidence_status == "unavailable"
+    assert record.evidence_path is None
+    assert record.evidence_error_path is not None
+    assert record.error_path is None
 
 
 def test_load_manifest_rejects_duplicate_scenario_ids(tmp_path):

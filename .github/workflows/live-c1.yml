@@ -8,6 +8,9 @@ on:
         required: true
         default: gpt-5.6-sol
         type: string
+  push:
+    branches:
+      - 'run/c1-live/**'
 
 permissions:
   contents: read
@@ -15,6 +18,8 @@ permissions:
 jobs:
   c1-live:
     runs-on: ubuntu-latest
+    env:
+      MODEL_ID: ${{ inputs.model || 'gpt-5.6-sol' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,7 +41,7 @@ jobs:
         run: |
           mkdir -p live-artifacts
           python scripts/run_c1_openai.py \
-            --model "${{ inputs.model }}" \
+            --model "$MODEL_ID" \
             --backstop \
             --out live-artifacts/c1-openai.json | tee live-artifacts/summary.txt
       - name: Upload reviewer evidence

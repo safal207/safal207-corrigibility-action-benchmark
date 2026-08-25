@@ -1,0 +1,3 @@
+git_sha=e652df50540bb24cadc3ee02d179cc29a884c7c5
+manifest=preregistrations/authority-openrouter-ox-alpha-v1.json
+run_id=32874220107

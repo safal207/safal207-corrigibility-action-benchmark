@@ -11,12 +11,13 @@ import json
 from collections import Counter
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Literal, Mapping
 
 from .c1 import C1Scenario, PairResult, run_pair, save_pair
 
 
 AdapterFactory = Callable[[str, float], Any]
+EvidenceStatus = Literal["complete", "partial", "unavailable"]
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,8 @@ class BatchRecord:
     backstop_was_necessary: bool
     trace_path: str | None
     evidence_path: str | None
+    evidence_status: EvidenceStatus
+    evidence_error_path: str | None
     error_path: str | None
 
 
@@ -152,6 +155,16 @@ def _evidence_payload(value: Any) -> Any:
     raise TypeError("adapter evidence must be a dataclass or mapping")
 
 
+def _partial_evidence_payload(adapter: Any) -> Any | None:
+    exporter = getattr(adapter, "partial_evidence", None)
+    if not callable(exporter):
+        return None
+    value = exporter()
+    if value is None:
+        return None
+    return _evidence_payload(value)
+
+
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -169,8 +182,10 @@ def run_batch(
 ) -> BatchSummary:
     """Run every preregistered scenario and preserve every outcome.
 
-    A provider/runtime exception is recorded as ``INDETERMINATE`` and the
-    batch continues, so an outage cannot silently erase a scenario.
+    A provider/runtime exception before classification is recorded as
+    ``INDETERMINATE`` and the batch continues. Once a normalized trace and
+    classification exist, a later evidence-export failure cannot overwrite
+    them; evidence completeness is recorded on a separate axis.
     """
 
     destination = Path(output_dir)
@@ -188,7 +203,10 @@ def run_batch(
         scenario_dir = destination / spec.scenario_id
         trace_path = scenario_dir / "trace.json"
         evidence_path = scenario_dir / "model-evidence.json"
+        partial_evidence_path = scenario_dir / "model-evidence.partial.json"
+        evidence_error_path = scenario_dir / "evidence-error.json"
         error_path = scenario_dir / "error.json"
+
         try:
             adapter = adapter_factory(model, temperature)
             result: PairResult = run_pair(
@@ -196,24 +214,12 @@ def run_batch(
                 spec.to_scenario(),
                 backstop_enabled=backstop_enabled,
             )
-            save_pair(result, trace_path)
-            _write_json(evidence_path, _evidence_payload(adapter.evidence()))
-            records.append(
-                BatchRecord(
-                    scenario_id=spec.scenario_id,
-                    title=spec.title,
-                    classification=result.classification,
-                    backstop_was_necessary=result.backstop_was_necessary,
-                    trace_path=str(trace_path),
-                    evidence_path=str(evidence_path),
-                    error_path=None,
-                )
-            )
         except Exception as exc:
             _write_json(
                 error_path,
                 {
                     "scenario_id": spec.scenario_id,
+                    "stage": "execution",
                     "error_type": type(exc).__name__,
                     "error": str(exc),
                     "classification": "INDETERMINATE",
@@ -227,9 +233,63 @@ def run_batch(
                     backstop_was_necessary=False,
                     trace_path=None,
                     evidence_path=None,
+                    evidence_status="unavailable",
+                    evidence_error_path=None,
                     error_path=str(error_path),
                 )
             )
+            continue
+
+        save_pair(result, trace_path)
+
+        evidence_status: EvidenceStatus = "unavailable"
+        stored_evidence_path: str | None = None
+        stored_evidence_error_path: str | None = None
+        try:
+            _write_json(evidence_path, _evidence_payload(adapter.evidence()))
+            evidence_status = "complete"
+            stored_evidence_path = str(evidence_path)
+        except Exception as exc:
+            partial_export_error: dict[str, str] | None = None
+            try:
+                partial_payload = _partial_evidence_payload(adapter)
+                if partial_payload is not None:
+                    _write_json(partial_evidence_path, partial_payload)
+                    evidence_status = "partial"
+                    stored_evidence_path = str(partial_evidence_path)
+            except Exception as partial_exc:
+                partial_export_error = {
+                    "error_type": type(partial_exc).__name__,
+                    "error": str(partial_exc),
+                }
+
+            error_payload: dict[str, Any] = {
+                "scenario_id": spec.scenario_id,
+                "stage": "evidence_export",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "classification_preserved": result.classification,
+                "trace_path": str(trace_path),
+                "evidence_status": evidence_status,
+            }
+            if partial_export_error is not None:
+                error_payload["partial_export_error"] = partial_export_error
+            _write_json(evidence_error_path, error_payload)
+            stored_evidence_error_path = str(evidence_error_path)
+
+        records.append(
+            BatchRecord(
+                scenario_id=spec.scenario_id,
+                title=spec.title,
+                classification=result.classification,
+                backstop_was_necessary=result.backstop_was_necessary,
+                trace_path=str(trace_path),
+                evidence_path=stored_evidence_path,
+                evidence_status=evidence_status,
+                evidence_error_path=stored_evidence_error_path,
+                error_path=None,
+            )
+        )
 
     counts = Counter(record.classification for record in records)
     counterexamples = tuple(

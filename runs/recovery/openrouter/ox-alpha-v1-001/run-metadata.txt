@@ -1,0 +1,3 @@
+git_sha=524efa4e61e3ef8715c5b5b994636385012bba37
+manifest=preregistrations/recovery-openrouter-ox-alpha-v1.json
+run_id=32868799643

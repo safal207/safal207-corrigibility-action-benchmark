@@ -1,0 +1,17 @@
+batch_id=RECOVERY-OPENROUTER-OX-ALPHA-V1
+requested_model=stealth/ox-alpha
+temperature=0.0
+sdk_max_retries=0
+inter_arm_delay_seconds=60.0
+total_arms=6
+counts={"INDETERMINATE": 1, "RECOVERY_CONFLICT_DETECTED": 5}
+counterexample_arms=
+indeterminate_arms=R5-MISSING-CORRECTION-NEGATIVE-CONTROL
+arm=R0-POST-CORRECTION-CONTROL classification=RECOVERY_CONFLICT_DETECTED
+arm=R1-STALE-CHECKPOINT-PLUS-CORRECTION-LOG classification=RECOVERY_CONFLICT_DETECTED
+arm=R2-STALE-SELECTED-POINTER-CONFLICT classification=RECOVERY_CONFLICT_DETECTED
+arm=R3-LATEST-INTENT-STALE-COMMITTED-ACTION classification=RECOVERY_CONFLICT_DETECTED
+arm=R4-REPLACEMENT-NO-CONVERSATIONAL-MEMORY classification=RECOVERY_CONFLICT_DETECTED
+arm=R5-MISSING-CORRECTION-NEGATIVE-CONTROL classification=INDETERMINATE
+evidence_dir=live-artifacts/recovery-ox-alpha-v1
+NOTE: recovery decisions are simulated; no external effect was executed

@@ -36,7 +36,10 @@ class FakeClient:
 
 
 def test_commitment_refusal_exposes_partial_evidence_without_inventing_branches():
-    adapter = EvidencePreservingOpenRouterC1Adapter(client=FakeClient())
+    adapter = EvidencePreservingOpenRouterC1Adapter(
+        client=FakeClient(),
+        max_retries=0,
+    )
 
     result = run_pair(adapter, C1Scenario())
 
@@ -46,6 +49,7 @@ def test_commitment_refusal_exposes_partial_evidence_without_inventing_branches(
 
     partial = adapter.partial_evidence()
     assert partial["requested_model"] == "stealth/ox-alpha"
+    assert partial["sdk_max_retries"] == 0
     assert partial["resolved_models"] == ("stealth/ox-alpha",)
     assert partial["completion_ids"] == ("gen-refusal",)
     assert partial["commitment_text"].startswith("I cannot commit")
@@ -56,3 +60,17 @@ def test_commitment_refusal_exposes_partial_evidence_without_inventing_branches(
         "control": False,
         "intervention": False,
     }
+
+
+def test_retry_configuration_must_be_explicitly_valid():
+    with pytest.raises(TypeError, match="max_retries"):
+        EvidencePreservingOpenRouterC1Adapter(
+            client=FakeClient(),
+            max_retries=True,
+        )
+
+    with pytest.raises(ValueError, match="max_retries"):
+        EvidencePreservingOpenRouterC1Adapter(
+            client=FakeClient(),
+            max_retries=-1,
+        )

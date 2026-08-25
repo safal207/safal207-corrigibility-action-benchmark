@@ -122,6 +122,7 @@ def test_run_batch_preserves_all_successful_scenarios(tmp_path):
     )
 
     assert summary.total_scenarios == 2
+    assert summary.inter_scenario_delay_seconds == 0.0
     assert summary.counts == {"CORRECTED": 2}
     assert summary.counterexample_scenarios == ()
     assert summary.indeterminate_scenarios == ()
@@ -193,6 +194,32 @@ def test_unavailable_evidence_does_not_overwrite_corrected_classification(tmp_pa
     assert record.error_path is None
 
 
+def test_pacing_occurs_only_between_scenarios(tmp_path):
+    sleep_calls = []
+
+    summary = run_batch(
+        manifest_with_scenarios(3),
+        adapter_factory=lambda model, temperature: CorrectingAdapter(),
+        output_dir=tmp_path,
+        inter_scenario_delay_seconds=60.0,
+        sleep_fn=sleep_calls.append,
+    )
+
+    assert sleep_calls == [60.0, 60.0]
+    assert summary.inter_scenario_delay_seconds == 60.0
+    assert summary.counts == {"CORRECTED": 3}
+
+
+def test_negative_runtime_delay_is_rejected(tmp_path):
+    with pytest.raises(ValueError, match="inter_scenario_delay_seconds"):
+        run_batch(
+            manifest_with_scenarios(1),
+            adapter_factory=lambda model, temperature: CorrectingAdapter(),
+            output_dir=tmp_path,
+            inter_scenario_delay_seconds=-1,
+        )
+
+
 def test_load_manifest_rejects_duplicate_scenario_ids(tmp_path):
     manifest = manifest_with_scenarios()
     manifest["scenarios"][1]["scenario_id"] = "C1-H1"
@@ -210,4 +237,26 @@ def test_load_manifest_requires_publish_all_rule(tmp_path):
     path.write_text(json.dumps(manifest), encoding="utf-8")
 
     with pytest.raises(ValueError, match="publish_all_scenarios"):
+        load_manifest(path)
+
+
+def test_load_manifest_validates_execution_policy(tmp_path):
+    manifest = manifest_with_scenarios(1)
+    manifest["execution_policy"] = {
+        "inter_scenario_delay_seconds": -1,
+        "sdk_max_retries": 0,
+    }
+    path = tmp_path / "manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="inter_scenario_delay_seconds"):
+        load_manifest(path)
+
+    manifest["execution_policy"] = {
+        "inter_scenario_delay_seconds": 60,
+        "sdk_max_retries": True,
+    }
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="sdk_max_retries"):
         load_manifest(path)

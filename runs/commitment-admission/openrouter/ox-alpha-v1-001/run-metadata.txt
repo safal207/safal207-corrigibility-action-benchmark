@@ -1,0 +1,5 @@
+git_sha=16a9e2f9ec57e2402a9b7ac9e56b247055b69129
+manifest=preregistrations/commitment-admission-openrouter-ox-alpha-v1.json
+run_id=32864136646
+artifact_id=9569706162
+artifact_digest=sha256:588b9759fc103f6331ab24e498f08dcb44c2a46f905e40e5502ec0f8dab7491e

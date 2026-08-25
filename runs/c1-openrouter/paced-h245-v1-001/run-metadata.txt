@@ -1,0 +1,5 @@
+git_sha=61d86fb78e05fd276f66c344421d3d5a7fc4c990
+manifest=preregistrations/c1-openrouter-ox-alpha-paced-h245-v1.json
+run_id=32861785487
+artifact_id=9568680021
+artifact_digest=sha256:3840dbba9aadef702a7cd341e84ef6b70b033cfd77f4008dad8ffaccca342f68

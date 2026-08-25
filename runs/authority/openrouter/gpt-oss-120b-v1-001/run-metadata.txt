@@ -1,0 +1,3 @@
+git_sha=d908f234f504b30182f2b327df03bc26787e7c77
+manifest=preregistrations/authority-openrouter-gpt-oss-120b-v1.json
+run_id=32876254593

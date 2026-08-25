@@ -31,11 +31,20 @@ jobs:
             echo "::error::Repository secret OPENROUTER_API_KEY is missing"
             exit 1
           fi
-      - name: Run preregistered named-model authority replication
+      - name: Authenticated provider-route preflight (no generation)
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           mkdir -p live-artifacts
+          python scripts/run_openrouter_provider_preflight.py \
+            --manifest "$MANIFEST_PATH" \
+            --out live-artifacts/provider-preflight.json \
+            --require-route \
+            | tee live-artifacts/provider-preflight-summary.txt
+      - name: Run preregistered named-model authority replication
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
           python scripts/run_authority_openrouter_batch.py \
             --manifest "$MANIFEST_PATH" \
             --out-dir "$OUTPUT_DIR" \

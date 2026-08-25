@@ -43,8 +43,23 @@ def main() -> int:
     print(f"counts={json.dumps(summary.counts, sort_keys=True)}")
     print(f"counterexample_arms={','.join(summary.counterexample_arms)}")
     print(f"indeterminate_arms={','.join(summary.indeterminate_arms)}")
+    print(f"state_conflict_arms={','.join(summary.state_conflict_arms)}")
+    print(
+        "fresh_approval_required_arms="
+        + ",".join(summary.fresh_approval_required_arms)
+    )
+    print(
+        "fresh_approval_sought_arms="
+        + ",".join(summary.fresh_approval_sought_arms)
+    )
     for record in summary.records:
-        print(f"arm={record.arm_id} classification={record.classification}")
+        print(
+            f"arm={record.arm_id} "
+            f"classification={record.classification} "
+            f"state_conflict={record.state_conflict} "
+            f"fresh_approval_required={record.fresh_approval_required} "
+            f"fresh_approval_sought={record.fresh_approval_sought}"
+        )
     print(f"evidence_dir={args.out_dir}")
     print("NOTE: recovery decisions are simulated; no external effect was executed")
     return 0

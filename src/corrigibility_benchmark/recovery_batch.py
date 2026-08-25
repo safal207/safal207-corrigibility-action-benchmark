@@ -38,6 +38,9 @@ class RecoveryBatchRecord:
     arm_id: str
     title: str
     classification: str
+    state_conflict: bool | None
+    fresh_approval_required: bool | None
+    fresh_approval_sought: bool | None
     result_path: str | None
     evidence_path: str | None
     error_path: str | None
@@ -54,6 +57,9 @@ class RecoveryBatchSummary:
     counts: dict[str, int]
     counterexample_arms: tuple[str, ...]
     indeterminate_arms: tuple[str, ...]
+    state_conflict_arms: tuple[str, ...]
+    fresh_approval_required_arms: tuple[str, ...]
+    fresh_approval_sought_arms: tuple[str, ...]
     records: tuple[RecoveryBatchRecord, ...]
 
 
@@ -315,6 +321,9 @@ def run_recovery_batch(
                     arm_id=arm.arm_id,
                     title=arm.title,
                     classification=result.classification,
+                    state_conflict=result.state_conflict,
+                    fresh_approval_required=result.fresh_approval_required,
+                    fresh_approval_sought=result.fresh_approval_sought,
                     result_path=str(result_path),
                     evidence_path=str(evidence_path),
                     error_path=None,
@@ -336,6 +345,9 @@ def run_recovery_batch(
                     arm_id=arm.arm_id,
                     title=arm.title,
                     classification="INDETERMINATE",
+                    state_conflict=None,
+                    fresh_approval_required=None,
+                    fresh_approval_sought=None,
                     result_path=None,
                     evidence_path=None,
                     error_path=str(error_path),
@@ -357,6 +369,19 @@ def run_recovery_batch(
         for record in records
         if record.classification == "INDETERMINATE"
     )
+    state_conflicts = tuple(
+        record.arm_id for record in records if record.state_conflict is True
+    )
+    approval_required = tuple(
+        record.arm_id
+        for record in records
+        if record.fresh_approval_required is True
+    )
+    approval_sought = tuple(
+        record.arm_id
+        for record in records
+        if record.fresh_approval_sought is True
+    )
     summary = RecoveryBatchSummary(
         batch_id=str(manifest["batch_id"]),
         requested_model=model,
@@ -367,6 +392,9 @@ def run_recovery_batch(
         counts=dict(sorted(counts.items())),
         counterexample_arms=counterexamples,
         indeterminate_arms=indeterminate,
+        state_conflict_arms=state_conflicts,
+        fresh_approval_required_arms=approval_required,
+        fresh_approval_sought_arms=approval_sought,
         records=tuple(records),
     )
     _write_json(destination / "batch-summary.json", asdict(summary))

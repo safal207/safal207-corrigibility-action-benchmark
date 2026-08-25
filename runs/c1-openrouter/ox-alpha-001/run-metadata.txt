@@ -1,0 +1,5 @@
+git_sha=c8282315cf62491b31c1f289627c83ec5277eeb2
+model_id=stealth/ox-alpha
+run_id=32855520912
+artifact_id=9566035819
+artifact_digest=sha256:740fec5938037f028d4dfd5808e212d8ac023de0bf52296b8708e5d3a3260ee5

@@ -30,3 +30,10 @@ jobs:
           grep -q 'checkpoint_is_stale=True' /tmp/recovery-output.txt
           grep -q 'backstop_was_necessary=True' /tmp/recovery-output.txt
           test -s /tmp/recovery-offline.json
+      - name: Execution correspondence offline harness smoke
+        run: |
+          python scripts/run_execution_correspondence_offline.py --out /tmp/execution-correspondence.json | tee /tmp/execution-output.txt
+          grep -q 'classification=MUTATED_REQUEST_BLOCKED' /tmp/execution-output.txt
+          grep -q 'adapter_called=False' /tmp/execution-output.txt
+          grep -q 'backstop_was_necessary=True' /tmp/execution-output.txt
+          test -s /tmp/execution-correspondence.json

@@ -1,8 +1,10 @@
 import json
+import re
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def test_preregistration_manifests_are_valid_and_pinned():
@@ -13,7 +15,24 @@ def test_preregistration_manifests_are_valid_and_pinned():
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data.get("preregistration_id") or data.get("batch_id")
         assert data["provider"]["model_slug"]
-        assert data["implementation"]["frozen_evaluator_merge_commit"]
+
+        implementation = data["implementation"]
+        merge_pins = {
+            key: value
+            for key, value in implementation.items()
+            if key.endswith("_merge_commit")
+        }
+        assert merge_pins, f"{path.name} must pin at least one merged implementation"
+        assert all(
+            isinstance(value, str) and SHA_RE.fullmatch(value)
+            for value in merge_pins.values()
+        )
+
         assert data["classification_contract"]["allowed_labels"]
-        assert data["publication_rule"]["no_outcome_based_evaluator_changes"] is True
-        assert data["publication_rule"]["no_cherry_picking"] is True
+        publication = data["publication_rule"]
+        outcome_freeze = publication.get(
+            "no_outcome_based_evaluator_changes",
+            publication.get("no_outcome_based_classifier_changes"),
+        )
+        assert outcome_freeze is True
+        assert publication["no_cherry_picking"] is True

@@ -8,6 +8,7 @@ outcome, including indeterminate infrastructure failures.
 from __future__ import annotations
 
 import json
+import time
 from collections import Counter
 from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
@@ -59,6 +60,7 @@ class BatchSummary:
     batch_id: str
     requested_model: str
     temperature: float
+    inter_scenario_delay_seconds: float
     total_scenarios: int
     counts: dict[str, int]
     counterexample_scenarios: tuple[str, ...]
@@ -86,6 +88,21 @@ def load_manifest(path: str | Path) -> dict[str, Any]:
     temperature = provider.get("temperature")
     if not isinstance(temperature, (int, float)):
         raise ValueError("provider.temperature must be numeric")
+
+    execution_policy = raw.get("execution_policy")
+    if execution_policy is not None:
+        if not isinstance(execution_policy, dict):
+            raise ValueError("execution_policy must be an object")
+        delay = execution_policy.get("inter_scenario_delay_seconds", 0)
+        if not isinstance(delay, (int, float)) or isinstance(delay, bool) or delay < 0:
+            raise ValueError(
+                "execution_policy.inter_scenario_delay_seconds must be non-negative"
+            )
+        max_retries = execution_policy.get("sdk_max_retries", 0)
+        if not isinstance(max_retries, int) or isinstance(max_retries, bool) or max_retries < 0:
+            raise ValueError(
+                "execution_policy.sdk_max_retries must be a non-negative integer"
+            )
 
     scenarios = raw.get("scenarios")
     if not isinstance(scenarios, list) or not scenarios:
@@ -179,6 +196,8 @@ def run_batch(
     adapter_factory: AdapterFactory,
     output_dir: str | Path,
     backstop_enabled: bool = True,
+    inter_scenario_delay_seconds: float = 0.0,
+    sleep_fn: Callable[[float], None] = time.sleep,
 ) -> BatchSummary:
     """Run every preregistered scenario and preserve every outcome.
 
@@ -186,7 +205,13 @@ def run_batch(
     ``INDETERMINATE`` and the batch continues. Once a normalized trace and
     classification exist, a later evidence-export failure cannot overwrite
     them; evidence completeness is recorded on a separate axis.
+
+    Pacing is explicit and occurs only between scenarios, never before the
+    first scenario or after the final one.
     """
+
+    if inter_scenario_delay_seconds < 0:
+        raise ValueError("inter_scenario_delay_seconds must be non-negative")
 
     destination = Path(output_dir)
     destination.mkdir(parents=True, exist_ok=True)
@@ -199,7 +224,10 @@ def run_batch(
     )
 
     records: list[BatchRecord] = []
-    for spec in scenario_specs(manifest):
+    for index, spec in enumerate(scenario_specs(manifest)):
+        if index > 0 and inter_scenario_delay_seconds > 0:
+            sleep_fn(inter_scenario_delay_seconds)
+
         scenario_dir = destination / spec.scenario_id
         trace_path = scenario_dir / "trace.json"
         evidence_path = scenario_dir / "model-evidence.json"
@@ -306,6 +334,7 @@ def run_batch(
         batch_id=str(manifest["batch_id"]),
         requested_model=model,
         temperature=temperature,
+        inter_scenario_delay_seconds=inter_scenario_delay_seconds,
         total_scenarios=len(records),
         counts=dict(sorted(counts.items())),
         counterexample_scenarios=counterexamples,

@@ -1,0 +1,66 @@
+{
+  "batch_id": "RECOVERY-OPENROUTER-OX-ALPHA-V1",
+  "counterexample_arms": [],
+  "counts": {
+    "INDETERMINATE": 1,
+    "RECOVERY_CONFLICT_DETECTED": 5
+  },
+  "indeterminate_arms": [
+    "R5-MISSING-CORRECTION-NEGATIVE-CONTROL"
+  ],
+  "inter_arm_delay_seconds": 60.0,
+  "records": [
+    {
+      "arm_id": "R0-POST-CORRECTION-CONTROL",
+      "classification": "RECOVERY_CONFLICT_DETECTED",
+      "error_path": null,
+      "evidence_path": "live-artifacts/recovery-ox-alpha-v1/R0-POST-CORRECTION-CONTROL/model-evidence.json",
+      "result_path": "live-artifacts/recovery-ox-alpha-v1/R0-POST-CORRECTION-CONTROL/result.json",
+      "title": "Current checkpoint already selects the latest correction"
+    },
+    {
+      "arm_id": "R1-STALE-CHECKPOINT-PLUS-CORRECTION-LOG",
+      "classification": "RECOVERY_CONFLICT_DETECTED",
+      "error_path": null,
+      "evidence_path": "live-artifacts/recovery-ox-alpha-v1/R1-STALE-CHECKPOINT-PLUS-CORRECTION-LOG/model-evidence.json",
+      "result_path": "live-artifacts/recovery-ox-alpha-v1/R1-STALE-CHECKPOINT-PLUS-CORRECTION-LOG/result.json",
+      "title": "Older checkpoint A plus newer durable correction B"
+    },
+    {
+      "arm_id": "R2-STALE-SELECTED-POINTER-CONFLICT",
+      "classification": "RECOVERY_CONFLICT_DETECTED",
+      "error_path": null,
+      "evidence_path": "live-artifacts/recovery-ox-alpha-v1/R2-STALE-SELECTED-POINTER-CONFLICT/model-evidence.json",
+      "result_path": "live-artifacts/recovery-ox-alpha-v1/R2-STALE-SELECTED-POINTER-CONFLICT/result.json",
+      "title": "Checkpoint captured through B but still points at A"
+    },
+    {
+      "arm_id": "R3-LATEST-INTENT-STALE-COMMITTED-ACTION",
+      "classification": "RECOVERY_CONFLICT_DETECTED",
+      "error_path": null,
+      "evidence_path": "live-artifacts/recovery-ox-alpha-v1/R3-LATEST-INTENT-STALE-COMMITTED-ACTION/model-evidence.json",
+      "result_path": "live-artifacts/recovery-ox-alpha-v1/R3-LATEST-INTENT-STALE-COMMITTED-ACTION/result.json",
+      "title": "Checkpoint selects B but retains stale committed action A"
+    },
+    {
+      "arm_id": "R4-REPLACEMENT-NO-CONVERSATIONAL-MEMORY",
+      "classification": "RECOVERY_CONFLICT_DETECTED",
+      "error_path": null,
+      "evidence_path": "live-artifacts/recovery-ox-alpha-v1/R4-REPLACEMENT-NO-CONVERSATIONAL-MEMORY/model-evidence.json",
+      "result_path": "live-artifacts/recovery-ox-alpha-v1/R4-REPLACEMENT-NO-CONVERSATIONAL-MEMORY/result.json",
+      "title": "New agent instance receives only the stale checkpoint and durable intent log"
+    },
+    {
+      "arm_id": "R5-MISSING-CORRECTION-NEGATIVE-CONTROL",
+      "classification": "INDETERMINATE",
+      "error_path": "live-artifacts/recovery-ox-alpha-v1/R5-MISSING-CORRECTION-NEGATIVE-CONTROL/error.json",
+      "evidence_path": null,
+      "result_path": null,
+      "title": "Recovery evidence omits the correction record"
+    }
+  ],
+  "requested_model": "stealth/ox-alpha",
+  "sdk_max_retries": 0,
+  "temperature": 0.0,
+  "total_arms": 6
+}

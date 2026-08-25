@@ -1,0 +1,58 @@
+name: Live C1 OpenRouter hard batch
+
+on:
+  workflow_dispatch:
+    inputs:
+      manifest:
+        description: Preregistration manifest path
+        required: true
+        default: preregistrations/c1-openrouter-ox-alpha-hard-v1.json
+        type: string
+  push:
+    branches:
+      - 'run/c1-openrouter-batch/**'
+
+permissions:
+  contents: read
+
+env:
+  MANIFEST_PATH: ${{ github.event_name == 'workflow_dispatch' && inputs.manifest || 'preregistrations/c1-openrouter-ox-alpha-hard-v1.json' }}
+
+jobs:
+  c1-hard-batch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark + OpenRouter adapter
+        run: python -m pip install -e '.[dev,live]'
+      - name: Require repository secret
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -z "$OPENROUTER_API_KEY" ]; then
+            echo "::error::Repository secret OPENROUTER_API_KEY is missing"
+            exit 1
+          fi
+      - name: Run preregistered hard batch
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          mkdir -p live-artifacts
+          python scripts/run_c1_openrouter_batch.py \
+            --manifest "$MANIFEST_PATH" \
+            --out-dir live-artifacts/c1-openrouter-hard-v1 \
+            | tee live-artifacts/console-summary.txt
+          printf 'git_sha=%s\nmanifest=%s\nrun_id=%s\n' \
+            "$GITHUB_SHA" "$MANIFEST_PATH" "$GITHUB_RUN_ID" \
+            > live-artifacts/run-metadata.txt
+      - name: Upload reviewer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-openrouter-hard-batch-${{ github.run_id }}
+          path: live-artifacts/
+          if-no-files-found: warn
+          retention-days: 30

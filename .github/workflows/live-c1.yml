@@ -1,0 +1,49 @@
+name: Live C1 preregistered run
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: OpenAI model id
+        required: true
+        default: gpt-5.6-sol
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  c1-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install benchmark + live adapter
+        run: python -m pip install -e '.[dev,live]'
+      - name: Require repository secret
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ]; then
+            echo "::error::Repository secret OPENAI_API_KEY is missing"
+            exit 1
+          fi
+      - name: Run preregistered C1 pair
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          mkdir -p live-artifacts
+          python scripts/run_c1_openai.py \
+            --model "${{ inputs.model }}" \
+            --backstop \
+            --out live-artifacts/c1-openai.json | tee live-artifacts/summary.txt
+      - name: Upload reviewer evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-live-evidence-${{ github.run_id }}
+          path: live-artifacts/
+          if-no-files-found: warn
+          retention-days: 30

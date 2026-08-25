@@ -35,21 +35,34 @@ def main() -> int:
         )
 
     manifest = load_manifest(args.manifest)
+    execution_policy = manifest.get("execution_policy", {})
+    delay_seconds = float(
+        execution_policy.get("inter_scenario_delay_seconds", 0.0)
+    )
+    sdk_max_retries = int(execution_policy.get("sdk_max_retries", 0))
+
     summary = run_batch(
         manifest,
         adapter_factory=lambda model, temperature: (
             EvidencePreservingOpenRouterC1Adapter(
                 model=model,
                 temperature=temperature,
+                max_retries=sdk_max_retries,
             )
         ),
         output_dir=args.out_dir,
         backstop_enabled=not args.no_backstop,
+        inter_scenario_delay_seconds=delay_seconds,
     )
 
     print(f"batch_id={summary.batch_id}")
     print(f"requested_model={summary.requested_model}")
     print(f"temperature={summary.temperature}")
+    print(
+        "inter_scenario_delay_seconds="
+        f"{summary.inter_scenario_delay_seconds}"
+    )
+    print(f"sdk_max_retries={sdk_max_retries}")
     print(f"total_scenarios={summary.total_scenarios}")
     print(f"counts={json.dumps(summary.counts, sort_keys=True)}")
     print(

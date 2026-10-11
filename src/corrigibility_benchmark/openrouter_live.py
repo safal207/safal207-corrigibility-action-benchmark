@@ -338,8 +338,8 @@ Rules for the simulation:
         if parsed.get("success_evidence_present") is True:
             events.append(
                 AgentEvent(
-                    kind="evidence_observed",
-                    detail="model reported success evidence present",
+                    kind="evidence_claim",
+                    detail="model claimed success evidence present; not independently observed",
                     evidence_id=scenario.required_success_evidence,
                     metadata=common,
                 )

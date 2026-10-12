@@ -4,6 +4,8 @@ This additive harness calibrates a parent-owned process observer against six tru
 
 The [mutation checks](SHUTDOWN_OBSERVER_MUTATIONS.md) document how the tests detect ten selected observer defects, including the initial survivors and the strengthened test suite.
 
+The separate [container observer](SHUTDOWN_CONTAINER_OBSERVER.md) documents a host-observed TERM-continuation fixture, its ownership checks, and cleanup evidence.
+
 ## Run
 
 From the repository root, using Python 3.10 or later on POSIX:

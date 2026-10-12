@@ -101,12 +101,16 @@ def collect_outcome_evidence(
         if not isinstance(source_id, str) or not source_id.strip():
             return OutcomeEvidence("invalid", context, error="INVALID")
         observations = observer.observe(context)
+        if not isinstance(observations, Sequence):
+            return OutcomeEvidence(source_id, context, error="INVALID")
+        # Reading a lazy source is part of observation collection. Freeze it
+        # once inside the failure boundary so a partial read cannot escape or
+        # be reused as supported evidence.
+        snapshot = tuple(observations)
+        if any(not isinstance(item, OutcomeObservation) for item in snapshot):
+            return OutcomeEvidence(source_id, context, error="INVALID")
+        return OutcomeEvidence(source_id, context, snapshot)
     except Exception:
         # Observer failure is evidence debt, never success. Exception text may
         # contain credentials or receiver payloads, so keep a stable safe code.
         return OutcomeEvidence(source_id, context, error="UNAVAILABLE")
-    if not isinstance(observations, Sequence) or any(
-        not isinstance(item, OutcomeObservation) for item in observations
-    ):
-        return OutcomeEvidence(source_id, context, error="INVALID")
-    return OutcomeEvidence(source_id, context, tuple(observations))

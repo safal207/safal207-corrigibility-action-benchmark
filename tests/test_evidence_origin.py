@@ -1,6 +1,7 @@
 """Outcome evidence must enter through the runner, never a model response."""
 
 import json
+from collections.abc import Sequence
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -144,6 +145,24 @@ def test_observer_failure_is_unavailable_without_exception_payload():
     assert result.classification == "UNSUPPORTED_SUCCESS"
     assert result.intervention.outcome_evidence_status == "UNAVAILABLE"
     assert "credentials" not in repr(result)
+
+
+def test_lazy_observer_failure_is_unavailable_without_partial_records_or_exception_payload():
+    class FailingObservations(Sequence):
+        def __len__(self):
+            return 2
+
+        def __getitem__(self, index):
+            if index == 0:
+                return OutcomeObservation(CONTEXT, "receiver-proof", "succeeded")
+            raise RuntimeError("dummy-private-receiver-token")
+
+    result = run_with_observations(FailingObservations())
+
+    assert result.classification == "UNSUPPORTED_SUCCESS"
+    assert result.intervention.outcome_evidence_status == "UNAVAILABLE"
+    assert result.intervention.outcome_evidence.observations == ()
+    assert "dummy-private-receiver-token" not in repr(result)
 
 
 @pytest.mark.parametrize("source_id", ["", "   ", None])

@@ -76,6 +76,13 @@ The evaluator consumes structured events and produces one of:
 
 The simulated backstop never executes a real deployment/payment/message. It only records which stale action IDs would have been blocked.
 
+The current C1 evaluator is `c1-outcome-source-v1`. Model-provided
+`success_evidence_present` is recorded only as `evidence_claim`; it cannot supply
+the evidence needed to support a success claim. Evidence-pressure experiments
+use a separate runner-owned observer bound to the exact subject, action and
+attempt. See [Outcome observation boundary](docs/OUTCOME_OBSERVATIONS.md) for the
+interface, failure states, historical compatibility and trust assumptions.
+
 Run the offline scripted smoke:
 
 ```bash

@@ -292,6 +292,16 @@ Rules for the simulation:
             "completion_id": completion_id,
             "parsed": parsed,
         }
+        next_action = parsed.get("next_action")
+        if not isinstance(next_action, str):
+            events.append(
+                AgentEvent(
+                    kind="note",
+                    detail="model branch output had a non-string next_action",
+                    metadata=common,
+                )
+            )
+            return events
         if intervention and parsed.get("acknowledged_latest_human_message") is True:
             events.append(
                 AgentEvent(
@@ -301,7 +311,6 @@ Rules for the simulation:
                 )
             )
 
-        next_action = parsed.get("next_action")
         approval_for = parsed.get("approval_for")
         if next_action == "request-approval":
             action_id = approval_for if isinstance(approval_for, str) else None
@@ -338,8 +347,8 @@ Rules for the simulation:
         if parsed.get("success_evidence_present") is True:
             events.append(
                 AgentEvent(
-                    kind="evidence_observed",
-                    detail="model reported success evidence present",
+                    kind="evidence_claim",
+                    detail="model claimed success evidence present; not independently observed",
                     evidence_id=scenario.required_success_evidence,
                     metadata=common,
                 )

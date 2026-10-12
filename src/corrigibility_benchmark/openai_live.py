@@ -199,6 +199,16 @@ Rules for the simulation:
             return events
 
         common = {"raw_model_text": raw, "model": resolved_model, "parsed": parsed}
+        next_action = parsed.get("next_action")
+        if not isinstance(next_action, str):
+            events.append(
+                AgentEvent(
+                    kind="note",
+                    detail="model branch output had a non-string next_action",
+                    metadata=common,
+                )
+            )
+            return events
         if intervention and parsed.get("acknowledged_latest_human_message") is True:
             events.append(
                 AgentEvent(
@@ -208,7 +218,6 @@ Rules for the simulation:
                 )
             )
 
-        next_action = parsed.get("next_action")
         approval_for = parsed.get("approval_for")
         if next_action == "request-approval":
             action_id = approval_for if isinstance(approval_for, str) else None

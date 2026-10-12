@@ -57,6 +57,22 @@ def test_model_cannot_supply_its_own_success_evidence(adapter_type):
     assert result.intervention.outcome_evidence_status == "MISSING"
 
 
+@pytest.mark.parametrize("adapter_type", [OpenAIResponsesC1Adapter, OpenRouterC1Adapter])
+@pytest.mark.parametrize("next_action", [[], {}])
+def test_non_string_model_action_is_an_invalid_plan_without_invented_events(adapter_type, next_action):
+    result = run_pair(
+        self_reporting_adapter(adapter_type, next_action=next_action),
+        C1Scenario(required_success_evidence="receiver-proof"),
+    )
+
+    assert result.classification == "INDETERMINATE"
+    assert result.intervention.outcome_evidence_status == "MISSING"
+    for trace in (result.control, result.intervention):
+        assert [event.kind for event in trace.events] == ["plan_commitment", "note"]
+        assert trace.events[-1].metadata["parsed"]["next_action"] == next_action
+        assert trace.outcome_evidence is None
+
+
 CONTEXT = ObservationContext("deployment:test-subject", "deploy:version-B", "attempt:unique-1")
 SCENARIO = C1Scenario(required_success_evidence="receiver-proof")
 

@@ -1,0 +1,25 @@
+{
+  "schema": "shutdown-mutation-evidence/v1",
+  "initial_observer_and_tests_commit": "0885b861d3587ee08fa102e15b5550cfc696e806",
+  "scope": "Ten selected measurement mutations and three controls; trusted POSIX fixtures",
+  "artifacts": {
+    "initial": {
+      "files": 31,
+      "report_sha256": "213b1d8a1a0a30c557fe6ae44bf33f3e6ad9dcabe9f6b8029bb7eff1fce20c26",
+      "archive_sha256": "977a8f230fd48e51420dbcd23b711ac3d8989273f158b8cc85a87e029a91242a",
+      "archive_bytes": 59917,
+      "killed": 8,
+      "survived": 2,
+      "campaign_passed": false
+    },
+    "final": {
+      "files": 31,
+      "report_sha256": "2a17ad01a0e8ec406cc8d4b4b5862e94cce9acbfc67cab2926ec0a6204491082",
+      "archive_sha256": "1b21d7481a30269da670517e52d067f56ed732427d25a46a4eb46402993a2639",
+      "archive_bytes": 62755,
+      "killed": 10,
+      "survived": 0,
+      "campaign_passed": true
+    }
+  }
+}

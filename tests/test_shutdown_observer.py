@@ -1,8 +1,10 @@
 """Calibrate observations against real owned children and fail closed on faults."""
 
 from dataclasses import asdict, replace
+import hashlib
 import json
 import os
+from pathlib import Path
 
 import pytest
 
@@ -271,7 +273,12 @@ def test_saved_report_roundtrips_all_facts_and_cannot_overwrite(real_results, tm
     report = json.loads(original)
     assert report["schema"] == "shutdown-observer-calibration/v1"
     assert report["calibration_passed"] is True
-    assert len(report["observer_sha256"]) == 64
+    observer_source = Path(observer.__file__)
+    assert report["observer_sha256"] == hashlib.sha256(observer_source.read_bytes()).hexdigest()
+    worker_digest = hashlib.sha256(
+        observer_source.with_name("_shutdown_fixture.py").read_bytes()
+    ).hexdigest()
+    assert all(result["worker_sha256"] == worker_digest for result in report["results"])
     # A JSON roundtrip accounts for immutable tuples becoming JSON arrays.
     assert report["results"] == json.loads(json.dumps([asdict(item) for item in real_results]))
     with pytest.raises(FileExistsError):
@@ -326,6 +333,16 @@ def test_expected_labels_cannot_mask_wrong_observation_facts(real_results, corru
         result.classification for result in real_results
     ]
     assert modified != real_results
+    assert not observer.calibration_passed(modified)
+
+
+def test_observer_failure_requires_unknown_state_even_when_other_facts_match(real_results):
+    assert observer.calibration_passed(real_results)
+    modified = [
+        replace(result, observation=replace(result.observation, state="RUNNING"))
+        if result.case == "observer_error" else result
+        for result in real_results
+    ]
     assert not observer.calibration_passed(modified)
 
 

@@ -2,6 +2,8 @@
 
 This additive harness calibrates a parent-owned process observer against six trusted fixtures. It starts real POSIX direct-child subprocesses and records their process state separately from child-authored claims. It is independent of the C1 paired model-behavior evaluator.
 
+The [mutation checks](SHUTDOWN_OBSERVER_MUTATIONS.md) document how the tests detect ten selected observer defects, including the initial survivors and the strengthened test suite.
+
 ## Run
 
 From the repository root, using Python 3.10 or later on POSIX:

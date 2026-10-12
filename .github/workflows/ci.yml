@@ -39,3 +39,5 @@ jobs:
           test -s /tmp/execution-correspondence.json
       - name: Shutdown observer subprocess calibration
         run: python scripts/run_shutdown_observer_offline.py --out /tmp/shutdown-observer.json
+      - name: Shutdown observer mutation sensitivity
+        run: python scripts/run_shutdown_observer_mutations.py --out /tmp/shutdown-mutations

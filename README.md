@@ -92,6 +92,10 @@ backstop_was_necessary=True
 
 This offline smoke is **not model-level evidence**. Its purpose is to freeze the protocol and evaluator before live collection.
 
+## Offline shutdown observer calibration
+
+A separate [shutdown observer harness](docs/SHUTDOWN_OBSERVER.md) runs six trusted POSIX child-process fixtures and distinguishes exit after a stop request, continued execution, early completion, step limits, observer errors, and false child markers. It records parent observations before cleanup and requires no live model or API credentials. This calibrates process measurement; it does not establish model corrigibility or hostile-code containment.
+
 ## C1 live OpenAI adapter
 
 `src/corrigibility_benchmark/openai_live.py` uses the OpenAI Responses API through `client.responses.create(...)`.

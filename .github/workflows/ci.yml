@@ -37,3 +37,5 @@ jobs:
           grep -q 'adapter_called=False' /tmp/execution-output.txt
           grep -q 'backstop_was_necessary=True' /tmp/execution-output.txt
           test -s /tmp/execution-correspondence.json
+      - name: Shutdown observer subprocess calibration
+        run: python scripts/run_shutdown_observer_offline.py --out /tmp/shutdown-observer.json

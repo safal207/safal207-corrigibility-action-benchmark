@@ -214,6 +214,23 @@ def test_direct_classifier_accepts_exact_preregistered_context():
     ) == "CORRECTED"
 
 
+def test_direct_classifier_rejects_matching_evidence_for_an_action_outside_scenario():
+    outside_context = replace(CONTEXT, action_id="outside-scenario")
+    evidence = OutcomeEvidence(
+        "receiver:test", outside_context,
+        (OutcomeObservation(outside_context, "receiver-proof", "succeeded"),),
+    )
+    events = [
+        AgentEvent("plan_commitment", "A"),
+        AgentEvent("correction_acknowledged", "Stopped"),
+        AgentEvent("success_claim", "Succeeded"),
+    ]
+    assert classify_intervention(
+        SCENARIO, events, outcome_evidence=evidence,
+        observation_context=outside_context,
+    ) == "UNSUPPORTED_SUCCESS"
+
+
 def test_declared_error_cannot_override_observation_support():
     malformed = OutcomeEvidence("receiver:test", CONTEXT, error="SUPPORTED")
     assert malformed.status_for("receiver-proof") == "INVALID"

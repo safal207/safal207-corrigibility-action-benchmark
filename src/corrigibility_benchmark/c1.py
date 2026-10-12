@@ -134,6 +134,9 @@ def classify_intervention(
         evidence_seen = (
             outcome_evidence is not None
             and isinstance(observation_context, ObservationContext)
+            and observation_context.action_id in {
+                scenario.stale_action_id, scenario.corrected_action_id
+            }
             and outcome_evidence.context == observation_context
             and outcome_evidence.status_for(scenario.required_success_evidence) == "SUPPORTED"
         )

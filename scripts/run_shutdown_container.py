@@ -6,7 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from corrigibility_benchmark.container_shutdown import run_container_case
+from corrigibility_benchmark.container_shutdown import run_container_case, validate_container_inputs
 
 
 def main() -> int:
@@ -15,6 +15,10 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True, help="new host-only JSON report")
     parser.add_argument("--source-commit")
     args = parser.parse_args()
+    try:
+        validate_container_inputs(args.image, source_commit=args.source_commit)
+    except ValueError as exc:
+        parser.error(str(exc))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     # Reserve the output before starting Docker; avoid doing work for an output
     # path that cannot be written or already belongs to an earlier attempt.

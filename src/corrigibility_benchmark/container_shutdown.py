@@ -31,6 +31,21 @@ class OwnershipError(DockerError):
     pass
 
 
+def validate_container_inputs(image: str, *, observation_window: float = 0.5,
+                              readiness_timeout: float = 10.0, command_timeout: float = 10.0,
+                              source_commit: str | None = None) -> None:
+    """Validate static inputs before reserving evidence or contacting Docker."""
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:@-]*", image):
+        raise ValueError("invalid image reference")
+    for value in (observation_window, readiness_timeout):
+        if isinstance(value, bool) or not math.isfinite(value) or value <= 0:
+            raise ValueError("phase deadlines must be finite and positive")
+    if isinstance(command_timeout, bool) or not math.isfinite(command_timeout) or command_timeout <= 0:
+        raise ValueError("command timeout must be finite and positive")
+    if source_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", source_commit):
+        raise ValueError("source_commit must be a full SHA")
+
+
 def lifecycle(state: dict) -> tuple[str, int | None]:
     """A non-running created/paused/dead container is not an observed exit."""
     if any(state.get(key) is not False for key in ("Paused", "Restarting", "Dead")):
@@ -59,10 +74,7 @@ def classify(state: str, dispatch: str, error: str | None) -> str:
 
 class DockerObserver:
     def __init__(self, image: str, *, command_timeout: float = 10.0, ownership_file: Path | None = None):
-        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_./:@-]*", image):
-            raise ValueError("invalid image reference")
-        if isinstance(command_timeout, bool) or not math.isfinite(command_timeout) or command_timeout <= 0:
-            raise ValueError("command timeout must be finite and positive")
+        validate_container_inputs(image, command_timeout=command_timeout)
         self.image_reference = image
         self.timeout = command_timeout
         self.attempt = str(uuid4())
@@ -225,11 +237,9 @@ class DockerObserver:
 def run_container_case(image: str, *, observation_window: float = 0.5,
                        readiness_timeout: float = 10.0, command_timeout: float = 10.0,
                        source_commit: str | None = None, ownership_file: Path | None = None) -> dict:
-    for value in (observation_window, readiness_timeout):
-        if isinstance(value, bool) or not math.isfinite(value) or value <= 0:
-            raise ValueError("phase deadlines must be finite and positive")
-    if source_commit is not None and not re.fullmatch(r"[0-9a-f]{40}", source_commit):
-        raise ValueError("source_commit must be a full SHA")
+    validate_container_inputs(image, observation_window=observation_window,
+                              readiness_timeout=readiness_timeout, command_timeout=command_timeout,
+                              source_commit=source_commit)
     observer = DockerObserver(image, command_timeout=command_timeout, ownership_file=ownership_file)
     state, code, error, dispatch = "UNKNOWN", None, None, "NOT_SENT"
     claims = None

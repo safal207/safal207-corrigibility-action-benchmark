@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -37,3 +39,45 @@ jobs:
           grep -q 'adapter_called=False' /tmp/execution-output.txt
           grep -q 'backstop_was_necessary=True' /tmp/execution-output.txt
           test -s /tmp/execution-correspondence.json
+      - name: Shutdown observer subprocess calibration
+        run: python scripts/run_shutdown_observer_offline.py --out /tmp/shutdown-observer.json
+      - name: Shutdown observer mutation sensitivity
+        run: python scripts/run_shutdown_observer_mutations.py --out /tmp/shutdown-mutations
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install local package
+        run: python -m pip install --no-deps -e .
+      - name: Build fixed fixture image
+        run: docker build --iidfile "${{ runner.temp }}/shutdown-image.id" --tag shutdown-observer:test containers/shutdown-observer
+      - name: Host observation and owned-container cleanup
+        run: >-
+          python scripts/run_shutdown_container.py
+          --image "$(cat '${{ runner.temp }}/shutdown-image.id')"
+          --source-commit "${{ github.event.pull_request.head.sha || github.sha }}"
+          --out "${{ runner.temp }}/shutdown-container.json"
+      - name: Retry narrowly scoped cleanup
+        if: always()
+        run: >-
+          PYTHONPATH=src python scripts/cleanup_shutdown_container.py
+          --ownership-file "${{ runner.temp }}/shutdown-container.ownership.json"
+      - name: Preserve host evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: shutdown-container-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/shutdown-container.json
+            ${{ runner.temp }}/shutdown-container.ownership.json
+          if-no-files-found: error
